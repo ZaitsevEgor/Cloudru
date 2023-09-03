@@ -1,0 +1,37 @@
+---
+
+- name: Плейбук для Cloudru
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Создаем нового пользователя 
+      user:
+        name: cloudru
+        password: "$6$f0cbejHsU5ZBsJV2$nNU8GWQCsh5kSQSDh6N//D2Y/0st8ZtFENUBDChWBXKnHpByoKpg9UPHcXUiJf1vA0LD9fQYOpgY1XGvszVts."
+        shell: /bin/bash
+
+    - name: Копирует предоставленный публичный ключ для пользователя cloudru
+      authorized_key:
+        user: cloudru
+        key: "{{ lookup('file', '/etc/ansible/cloudkey.pub') }}"
+        state: present
+
+    - name: Разрешает на хосте авторизацию через ssh по ключу 
+      lineinfile:
+        dest: /etc/ssh/sshd_config
+        regexp: '^PubkeyAuthentication'
+        line: 'PubkeyAuthentication yes'
+        backup: yes
+
+    - name: запрещает логин по ssh от пользователя root 
+      lineinfile:
+        dest: /etc/ssh/sshd_config
+        regexp: '^PermitRootLogin'
+        line: 'PermitRootLogin no'
+        backup: yes
+
+    - name: Перезгрузка службы SSH 
+      service:
+        name: sshd
+        state: reloaded
